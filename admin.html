@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ペンライト管理画面</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    background: #0f0f13;
+    color: #f0f0f0;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: #888;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .songs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .song-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #1c1c24;
+    border: 1px solid #2a2a36;
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .song-row:hover { background: #22222e; border-color: #3a3a4a; }
+  .song-row.selected { border-color: #6060ff; background: #1e1e30; }
+  .dot {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.12);
+  }
+  .song-name { flex: 1; font-size: 15px; }
+  .song-color-name { font-size: 12px; color: #888; }
+  .color-section {
+    background: #1c1c24;
+    border: 1px solid #2a2a36;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .swatch {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: transform 0.1s, border-color 0.1s;
+  }
+  .swatch:hover { transform: scale(1.12); }
+  .swatch.active { border-color: #fff; transform: scale(1.12); }
+  .custom-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .custom-row label { font-size: 13px; color: #aaa; }
+  input[type=color] {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 2px solid #3a3a4a;
+    background: none;
+    cursor: pointer;
+    padding: 2px;
+  }
+  .send-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    color: #fff;
+    background: #4040cc;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-bottom: 12px;
+    letter-spacing: 0.02em;
+  }
+  .send-btn:hover { opacity: 0.88; }
+  .send-btn:active { transform: scale(0.97); }
+  .send-btn:disabled { opacity: 0.4; cursor: default; }
+  .status {
+    text-align: center;
+    font-size: 13px;
+    color: #888;
+    min-height: 20px;
+    transition: color 0.3s;
+  }
+  .status.ok { color: #4caf50; }
+  .status.err { color: #f44336; }
+  .preview-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .preview-box {
+    flex: 1;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid #2a2a36;
+    transition: background 0.3s;
+  }
+  .preview-label { font-size: 12px; color: #888; }
+
+  /* 曲追加 */
+  .add-song-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+    background: transparent;
+    border: 1px dashed #3a3a4a;
+    border-radius: 10px;
+    color: #888;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .add-song-btn:hover { border-color: #6060ff; color: #aaa; }
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #1c1c24;
+    border: 1px solid #3a3a4a;
+    border-radius: 20px;
+    padding: 24px;
+    width: min(360px, 90vw);
+  }
+  .modal h2 { font-size: 16px; margin-bottom: 16px; }
+  .modal input[type=text] {
+    width: 100%;
+    padding: 10px 12px;
+    background: #111118;
+    border: 1px solid #3a3a4a;
+    border-radius: 8px;
+    color: #f0f0f0;
+    font-size: 15px;
+    margin-bottom: 14px;
+    outline: none;
+  }
+  .modal input[type=text]:focus { border-color: #6060ff; }
+  .modal-btns { display: flex; gap: 8px; }
+  .modal-btns button {
+    flex: 1; padding: 10px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn-cancel { background: #2a2a36; color: #ccc; }
+  .btn-ok { background: #4040cc; color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>🎛️ ペンライト管理画面</h1>
+
+<div class="section-label">曲リスト（タップして選択）</div>
+<div class="songs" id="song-list"></div>
+<button class="add-song-btn" onclick="openAddModal()">＋ 曲を追加</button>
+
+<br>
+
+<div id="color-section" class="color-section" style="display:none;">
+  <div class="section-label" id="color-label">色を選ぶ</div>
+  <div class="swatches" id="swatches"></div>
+  <div class="custom-row">
+    <input type="color" id="custom-color" value="#ffffff">
+    <label>カスタムカラー</label>
+  </div>
+  <div class="preview-row">
+    <div class="preview-box" id="preview-box"></div>
+    <span class="preview-label" id="preview-label">選択中の色</span>
+  </div>
+</div>
+
+<button class="send-btn" id="send-btn" disabled onclick="sendColor()">
+  この色を全員の画面に送る
+</button>
+<div class="status" id="status"></div>
+
+<!-- 曲追加モーダル -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>曲名を入力</h2>
+    <input type="text" id="new-song-name" placeholder="例：3曲目" maxlength="20">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-ok" onclick="addSong()">追加</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDLLfiNG-WMhcbKfAFOMHKkPMS3kBjUpP0",
+  authDomain: "penlight-ec75d.firebaseapp.com",
+  databaseURL: "https://penlight-ec75d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "penlight-ec75d",
+  storageBucket: "penlight-ec75d.firebasestorage.app",
+  messagingSenderId: "639204423241",
+  appId: "1:639204423241:web:51cbe1fd475e823d747198"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const PRESETS = [
+  { hex:'#FF2D55', name:'赤' },
+  { hex:'#FF6B00', name:'オレンジ' },
+  { hex:'#FFD600', name:'黄色' },
+  { hex:'#00C853', name:'緑' },
+  { hex:'#00BCD4', name:'水色' },
+  { hex:'#2979FF', name:'青' },
+  { hex:'#AA00FF', name:'紫' },
+  { hex:'#FF4081', name:'ピンク' },
+  { hex:'#FFFFFF', name:'白' },
+];
+
+let songs = [
+  { id:1, name:'1曲目', color:'#FF2D55' },
+  { id:2, name:'2曲目', color:'#FFD600' },
+  { id:3, name:'3曲目', color:'#2979FF' },
+];
+let selectedId = null;
+
+function getSelected() { return songs.find(s => s.id === selectedId); }
+
+function colorName(hex) {
+  const p = PRESETS.find(p => p.hex.toLowerCase() === hex.toLowerCase());
+  return p ? p.name : hex;
+}
+
+function renderSongs() {
+  const list = document.getElementById('song-list');
+  list.innerHTML = songs.map(s => `
+    <div class="song-row${s.id === selectedId ? ' selected' : ''}" onclick="window._selectSong(${s.id})">
+      <div class="dot" style="background:${s.color};"></div>
+      <span class="song-name">${s.name}</span>
+      <span class="song-color-name">${colorName(s.color)}</span>
+    </div>
+  `).join('');
+}
+
+function renderSwatches() {
+  const song = getSelected();
+  const wrap = document.getElementById('swatches');
+  wrap.innerHTML = PRESETS.map(p => `
+    <div class="swatch${song && song.color === p.hex ? ' active' : ''}"
+      style="background:${p.hex};"
+      title="${p.name}"
+      onclick="window._setColor('${p.hex}')">
+    </div>
+  `).join('');
+}
+
+function updatePreview() {
+  const song = getSelected();
+  if (!song) return;
+  document.getElementById('preview-box').style.background = song.color;
+  document.getElementById('preview-label').textContent = colorName(song.color);
+  document.getElementById('custom-color').value = song.color;
+}
+
+window._selectSong = function(id) {
+  selectedId = id;
+  const song = getSelected();
+  document.getElementById('color-section').style.display = '';
+  document.getElementById('color-label').textContent = `「${song.name}」の色`;
+  document.getElementById('send-btn').disabled = false;
+  renderSongs();
+  renderSwatches();
+  updatePreview();
+};
+
+window._setColor = function(hex) {
+  const song = getSelected();
+  if (!song) return;
+  song.color = hex;
+  document.getElementById('custom-color').value = hex;
+  renderSongs();
+  renderSwatches();
+  updatePreview();
+};
+
+document.getElementById('custom-color').addEventListener('input', function() {
+  window._setColor(this.value);
+});
+
+window.sendColor = async function() {
+  const song = getSelected();
+  if (!song) return;
+  const btn = document.getElementById('send-btn');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.className = 'status';
+  status.textContent = '送信中...';
+  try {
+    await set(ref(db, 'penlight/current'), {
+      color: song.color,
+      songName: song.name,
+      updatedAt: Date.now()
+    });
+    status.className = 'status ok';
+    status.textContent = `✓ 「${song.name}」→ ${colorName(song.color)} を送信しました`;
+  } catch(e) {
+    status.className = 'status err';
+    status.textContent = '送信失敗: ' + e.message;
+  }
+  btn.disabled = false;
+};
+
+window.openAddModal = function() {
+  document.getElementById('new-song-name').value = '';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('new-song-name').focus(), 100);
+};
+window.closeModal = function() {
+  document.getElementById('modal').classList.remove('open');
+};
+window.addSong = function() {
+  const name = document.getElementById('new-song-name').value.trim();
+  if (!name) return;
+  const id = Date.now();
+  songs.push({ id, name, color:'#FFFFFF' });
+  closeModal();
+  renderSongs();
+};
+
+renderSongs();
+</script>
+</body>
+</html>
