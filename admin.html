@@ -325,6 +325,8 @@ document.getElementById('custom-color').addEventListener('input', function() {
   window._setColor(this.value);
 });
 
+let cooldownTimer = null;
+
 window.sendColor = async function() {
   const song = getSelected();
   if (!song) return;
@@ -334,18 +336,28 @@ window.sendColor = async function() {
   status.className = 'status';
   status.textContent = '送信中...';
   try {
-    await set(ref(db, 'penlight/current'), {
-      color: song.color,
-      songName: song.name,
-      updatedAt: Date.now()
-    });
+    await set(ref(db, 'penlight/current/color'), song.color);
     status.className = 'status ok';
     status.textContent = `✓ 「${song.name}」→ ${colorName(song.color)} を送信しました`;
   } catch(e) {
     status.className = 'status err';
     status.textContent = '送信失敗: ' + e.message;
+    btn.disabled = false;
+    return;
   }
-  btn.disabled = false;
+  // 3秒クールダウン
+  let remaining = 3;
+  clearInterval(cooldownTimer);
+  cooldownTimer = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(cooldownTimer);
+      btn.disabled = false;
+      btn.textContent = 'この色を全員の画面に送る';
+    } else {
+      btn.textContent = `送信しました（あと ${remaining} 秒）`;
+    }
+  }, 1000);
 };
 
 window.openAddModal = function() {
