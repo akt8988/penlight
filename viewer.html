@@ -33,9 +33,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-onValue(ref(db, 'penlight/current'), (snapshot) => {
+onValue(ref(db, 'penlight/current/color'), (snapshot) => {
   if (!snapshot.exists()) return;
-  const color = snapshot.val().color || '#111111';
+  const color = snapshot.val() || '#111111';
   document.body.style.backgroundColor = color;
 });
 
